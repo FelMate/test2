@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 
 FILE_NAME = "notes.json"
 
@@ -16,45 +17,113 @@ def save_notes(notes):
         json.dump(notes, f, indent=4)
 
 
+def generate_id(notes):
+    if not notes:
+        return 1
+    return max(note["id"] for note in notes) + 1
+
+
 def add_note():
-    note = input("Enter your note: ")
+    text = input("Enter your note: ")
     notes = load_notes()
+
+    note = {
+        "id": generate_id(notes),
+        "text": text,
+        "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "important": False
+    }
+
     notes.append(note)
     save_notes(notes)
     print("Note added.")
 
 
-def view_notes():
-    notes = load_notes()
+def view_notes(notes=None):
+    if notes is None:
+        notes = load_notes()
+
     if not notes:
         print("No notes found.")
         return
+
     print("\nYour Notes:")
-    for i, note in enumerate(notes, 1):
-        print(f"{i}. {note}")
+    for note in notes:
+        star = "⭐" if note["important"] else ""
+        print(f'[{note["id"]}] {note["text"]} {star}')
+        print(f'    Created: {note["created"]}')
 
 
 def delete_note():
     notes = load_notes()
-    view_notes()
-    if not notes:
-        return
+    view_notes(notes)
+
     try:
-        index = int(input("Enter note number to delete: ")) - 1
-        removed = notes.pop(index)
+        note_id = int(input("Enter note ID to delete: "))
+        notes = [n for n in notes if n["id"] != note_id]
         save_notes(notes)
-        print(f"Deleted: {removed}")
-    except (ValueError, IndexError):
-        print("Invalid selection.")
+        print("Note deleted.")
+    except ValueError:
+        print("Invalid input.")
+
+
+def edit_note():
+    notes = load_notes()
+    view_notes(notes)
+
+    try:
+        note_id = int(input("Enter note ID to edit: "))
+        for note in notes:
+            if note["id"] == note_id:
+                new_text = input("Enter new text: ")
+                note["text"] = new_text
+                save_notes(notes)
+                print("Note updated.")
+                return
+        print("Note not found.")
+    except ValueError:
+        print("Invalid input.")
+
+
+def toggle_important():
+    notes = load_notes()
+    view_notes(notes)
+
+    try:
+        note_id = int(input("Enter note ID to toggle important: "))
+        for note in notes:
+            if note["id"] == note_id:
+                note["important"] = not note["important"]
+                save_notes(notes)
+                print("Updated importance.")
+                return
+        print("Note not found.")
+    except ValueError:
+        print("Invalid input.")
+
+
+def search_notes():
+    query = input("Search: ").lower()
+    notes = load_notes()
+
+    results = [n for n in notes if query in n["text"].lower()]
+
+    if results:
+        view_notes(results)
+    else:
+        print("No matches found.")
 
 
 def main():
     while True:
-        print("\n--- Note Manager ---")
+        print("\n--- Advanced Note Manager ---")
         print("1. Add note")
         print("2. View notes")
         print("3. Delete note")
-        print("4. Exit")
+        print("4. Edit note")
+        print("5. Toggle important ⭐")
+        print("6. Search notes")
+        print("7. Exit")
 
         choice = input("Choose an option: ")
 
@@ -65,6 +134,12 @@ def main():
         elif choice == "3":
             delete_note()
         elif choice == "4":
+            edit_note()
+        elif choice == "5":
+            toggle_important()
+        elif choice == "6":
+            search_notes()
+        elif choice == "7":
             print("Goodbye!")
             break
         else:
